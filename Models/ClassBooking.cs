@@ -2,19 +2,39 @@ namespace BookingService.Models;
 
 public class ClassBooking
 {
-    public Guid HoldBookingId { get; set; }
+    public Guid ClassBookingId { get; set; }
     public Guid UserId { get; set; }
-    public Guid HoldSessionId { get; set; }
+    public Guid ClassSessionId { get; set; }
     public DateTime BookedAt { get; set; }
-    public DateTime? CancelledAt { get; set; } //kan være null
-    public BookingStatus Status { get; set; } 
+    public DateTime? CancelledAt { get; set; }
+    public BookingStatus Status { get; set; }
+
+    public void Confirm()
+    {
+        Status = BookingStatus.Confirmed;
+    }
+
+    public void Cancel(DateTime currentTime)
+    {
+        Status = BookingStatus.Cancelled;
+        CancelledAt = currentTime;
+    }
+
+    public void MarkNoShow()
+    {
+        Status = BookingStatus.NoShow;
+    }
+
+    public bool CanBeCancelled(DateTime currentTime)
+    {
+        return Status == BookingStatus.Confirmed && currentTime < BookedAt;
+    }
 }
 
-// BookingStatus definerer de mulige tilstande en booking kan have.
 public enum BookingStatus
 {
     Confirmed,
     Cancelled,
-    Waitlisted,
-    NoShow
+    NoShow,
+    WaitListed
 }

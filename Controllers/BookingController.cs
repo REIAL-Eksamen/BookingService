@@ -1,32 +1,81 @@
+using BookingService.DTOs;
+using BookingService.Models;
+using BookingService.Repositories;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BookingService.Controllers;
 
 [ApiController]
-[Route("[controller]")]
+[Route("api/bookings")]
 public class BookingController : ControllerBase
 {
-    private static readonly string[] Summaries = new[]
-    {
-        "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-    };
-
+    private readonly IBookingRepository _bookingRepository;
     private readonly ILogger<BookingController> _logger;
 
-    public BookingController(ILogger<BookingController> logger)
+    public BookingController(IBookingRepository bookingRepository, ILogger<BookingController> logger)
     {
+        _bookingRepository = bookingRepository;
         _logger = logger;
     }
 
-    [HttpGet(Name = "GetWeatherForecast")]
-    public IEnumerable<WeatherForecast> Get()
+    [HttpGet(Name = "GetBookings")]
+    public IEnumerable<ClassBooking> Get()
     {
-        return Enumerable.Range(1, 5).Select(index => new WeatherForecast
+        return _bookingRepository.GetAll();
+    }
+
+    [HttpGet("{bookingId}", Name = "GetBookingById")]
+    public ActionResult<ClassBooking> GetById(Guid bookingId)
+    {
+        var booking = _bookingRepository.GetById(bookingId);
+
+        if (booking is null)
         {
-            Date = DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            TemperatureC = Random.Shared.Next(-20, 55),
-            Summary = Summaries[Random.Shared.Next(Summaries.Length)]
-        })
-        .ToArray();
+            return NotFound();
+        }
+
+        return Ok(booking);
+    }
+
+    [HttpGet("user/{userId}", Name = "GetBookingsByUser")]
+    public ActionResult<IEnumerable<ClassBooking>> GetByUserId(Guid userId)
+    {
+        var bookings = _bookingRepository.GetByUserId(userId);
+        return Ok(bookings);
+    }
+
+    [HttpPost(Name = "CreateBooking")]
+    public ActionResult<ClassBooking> Create([FromBody] CreateBookingDto dto)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        var booking = new ClassBooking
+        {
+            ClassBookingId = Guid.NewGuid(),
+            UserId = dto.UserId,
+            ClassSessionId = dto.ClassSessionId,
+            BookedAt = DateTime.UtcNow,
+            Status = BookingStatus.Confirmed
+        };
+
+        _bookingRepository.Add(booking);
+
+        return CreatedAtRoute("GetBookingById", new { bookingId = booking.ClassBookingId }, booking);
+    }
+
+    [HttpPut("{bookingId}/cancel", Name = "CancelBooking")]
+    public IActionResult Cancel(Guid bookingId)
+    {
+        var cancelled = _bookingRepository.Cancel(bookingId, DateTime.UtcNow);
+
+        if (!cancelled)
+        {
+            return NotFound();
+        }
+
+        return NoContent();
     }
 }
