@@ -1,4 +1,5 @@
 using BookingService.Repositories;
+using BookingService.Clients;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Serializers;
@@ -15,6 +16,11 @@ builder.Services.AddControllers()
 builder.Services.AddOpenApi();
 
 builder.Services.AddSingleton<IBookingRepository, MongoBookingRepository>();
+
+builder.Services.AddHttpClient<ClassServiceClient>(client =>
+{
+    client.BaseAddress = new Uri(builder.Configuration["ClassService:BaseUrl"]!);
+});
 
 var app = builder.Build();
 

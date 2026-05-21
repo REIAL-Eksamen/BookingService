@@ -1,7 +1,12 @@
+using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
+
 namespace BookingService.Models;
 
 public class ClassBooking
 {
+    [BsonId]
+    [BsonRepresentation(BsonType.String)]
     public Guid ClassBookingId { get; set; }
     public Guid UserId { get; set; }
     public Guid ClassSessionId { get; set; }
@@ -9,10 +14,7 @@ public class ClassBooking
     public DateTime? CancelledAt { get; set; }
     public BookingStatus Status { get; set; }
 
-    public void Confirm()
-    {
-        Status = BookingStatus.Confirmed;
-    }
+    public void Confirm() => Status = BookingStatus.Confirmed;
 
     public void Cancel(DateTime currentTime)
     {
@@ -20,15 +22,10 @@ public class ClassBooking
         CancelledAt = currentTime;
     }
 
-    public void MarkNoShow()
-    {
-        Status = BookingStatus.NoShow;
-    }
+    public void MarkNoShow() => Status = BookingStatus.NoShow;
 
-    public bool CanBeCancelled(DateTime currentTime)
-    {
-        return Status == BookingStatus.Confirmed && currentTime < BookedAt;
-    }
+    public bool CanBeCancelled(DateTime currentTime) =>
+        Status == BookingStatus.Confirmed && currentTime < BookedAt;
 }
 
 public enum BookingStatus

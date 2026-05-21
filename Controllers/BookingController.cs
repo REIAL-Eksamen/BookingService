@@ -1,6 +1,7 @@
 using BookingService.DTOs;
 using BookingService.Models;
 using BookingService.Repositories;
+using BookingService.Clients;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BookingService.Controllers;
@@ -11,11 +12,13 @@ public class BookingController : ControllerBase
 {
     private readonly IBookingRepository _bookingRepository;
     private readonly ILogger<BookingController> _logger;
+    private readonly ClassServiceClient _classServiceClient;
 
-    public BookingController(IBookingRepository bookingRepository, ILogger<BookingController> logger)
+    public BookingController(IBookingRepository bookingRepository, ILogger<BookingController> logger, ClassServiceClient classServiceClient)
     {
         _bookingRepository = bookingRepository;
         _logger = logger;
+        _classServiceClient = classServiceClient;
     }
 
     [HttpGet(Name = "GetBookings")]
@@ -45,12 +48,19 @@ public class BookingController : ControllerBase
     }
 
     [HttpPost(Name = "CreateBooking")]
-    public ActionResult<ClassBooking> Create([FromBody] CreateBookingDto dto)
+    public async Task<ActionResult<ClassBooking>> Create([FromBody] CreateBookingDto dto)
     {
         if (!ModelState.IsValid)
         {
             return BadRequest(ModelState);
         }
+
+        // Midlertidigt kommenteret ud til ClassService er klar
+        // var classExists = await _classServiceClient.GetClassByIdAsync(dto.ClassSessionId.ToString());
+        // if (classExists is null)
+        // {
+        //     return NotFound($"Klassen {dto.ClassSessionId} findes ikke.");
+        // }
 
         var booking = new ClassBooking
         {
