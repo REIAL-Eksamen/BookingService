@@ -24,16 +24,16 @@ public class MongoBookingRepository : IBookingRepository
     public IEnumerable<ClassBooking> GetAll() =>
         _bookings.Find(_ => true).ToList();
 
-    public ClassBooking? GetById(Guid bookingId) =>
+    public ClassBooking? GetById(string bookingId) =>
         _bookings.Find(b => b.ClassBookingId == bookingId).FirstOrDefault();
 
-    public IEnumerable<ClassBooking> GetByUserId(Guid userId) =>
+    public IEnumerable<ClassBooking> GetByUserId(string userId) =>
         _bookings.Find(b => b.UserId == userId).ToList();
 
     public void Add(ClassBooking booking) =>
         _bookings.InsertOne(booking);
 
-    public bool Cancel(Guid bookingId, DateTime cancelledAt)
+    public bool Cancel(string bookingId, DateTime cancelledAt)
     {
         var booking = GetById(bookingId);
         if (booking is null) return false;

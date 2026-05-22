@@ -28,7 +28,7 @@ public class BookingController : ControllerBase
     }
 
     [HttpGet("{bookingId}", Name = "GetBookingById")]
-    public ActionResult<ClassBooking> GetById(Guid bookingId)
+    public ActionResult<ClassBooking> GetById(string bookingId)
     {
         var booking = _bookingRepository.GetById(bookingId);
 
@@ -41,7 +41,7 @@ public class BookingController : ControllerBase
     }
 
     [HttpGet("user/{userId}", Name = "GetBookingsByUser")]
-    public ActionResult<IEnumerable<ClassBooking>> GetByUserId(Guid userId)
+    public ActionResult<IEnumerable<ClassBooking>> GetByUserId(string userId)
     {
         var bookings = _bookingRepository.GetByUserId(userId);
         return Ok(bookings);
@@ -56,7 +56,7 @@ public class BookingController : ControllerBase
         }
 
         // Midlertidigt kommenteret ud til ClassService er klar
-        // var classExists = await _classServiceClient.GetClassByIdAsync(dto.ClassSessionId.ToString());
+        // var classExists = await _classServiceClient.GetClassByIdAsync(dto.ClassSessionId);
         // if (classExists is null)
         // {
         //     return NotFound($"Klassen {dto.ClassSessionId} findes ikke.");
@@ -64,7 +64,6 @@ public class BookingController : ControllerBase
 
         var booking = new ClassBooking
         {
-            ClassBookingId = Guid.NewGuid(),
             UserId = dto.UserId,
             ClassSessionId = dto.ClassSessionId,
             BookedAt = DateTime.UtcNow,
@@ -77,7 +76,7 @@ public class BookingController : ControllerBase
     }
 
     [HttpPut("{bookingId}/cancel", Name = "CancelBooking")]
-    public IActionResult Cancel(Guid bookingId)
+    public IActionResult Cancel(string bookingId)
     {
         var cancelled = _bookingRepository.Cancel(bookingId, DateTime.UtcNow);
 

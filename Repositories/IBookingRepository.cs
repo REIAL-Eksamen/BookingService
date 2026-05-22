@@ -5,8 +5,8 @@ namespace BookingService.Repositories;
 public interface IBookingRepository
 {
     IEnumerable<ClassBooking> GetAll();
-    ClassBooking? GetById(Guid bookingId);
-    IEnumerable<ClassBooking> GetByUserId(Guid userId);
+    ClassBooking? GetById(string bookingId);
+    IEnumerable<ClassBooking> GetByUserId(string userId);
     void Add(ClassBooking booking);
-    bool Cancel(Guid bookingId, DateTime cancelledAt);
+    bool Cancel(string bookingId, DateTime cancelledAt);
 }

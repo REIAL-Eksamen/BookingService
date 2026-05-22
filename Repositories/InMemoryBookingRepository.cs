@@ -8,15 +8,15 @@ public class InMemoryBookingRepository : IBookingRepository
 
     public IEnumerable<ClassBooking> GetAll() => _bookings;
 
-    public ClassBooking? GetById(Guid bookingId) =>
+    public ClassBooking? GetById(string bookingId) =>
         _bookings.FirstOrDefault(b => b.ClassBookingId == bookingId);
 
-    public IEnumerable<ClassBooking> GetByUserId(Guid userId) =>
+    public IEnumerable<ClassBooking> GetByUserId(string userId) =>
         _bookings.Where(b => b.UserId == userId);
 
     public void Add(ClassBooking booking) => _bookings.Add(booking);
 
-    public bool Cancel(Guid bookingId, DateTime cancelledAt)
+    public bool Cancel(string bookingId, DateTime cancelledAt)
     {
         var booking = GetById(bookingId);
         if (booking is null) return false;

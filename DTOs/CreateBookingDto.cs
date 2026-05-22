@@ -2,6 +2,6 @@ namespace BookingService.DTOs;
 
 public class CreateBookingDto
 {
-    public Guid UserId { get; set; }
-    public Guid ClassSessionId { get; set; }
+    public string UserId { get; set; } = "";
+    public string ClassSessionId { get; set; } = "";
 }

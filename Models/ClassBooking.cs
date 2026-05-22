@@ -6,10 +6,11 @@ namespace BookingService.Models;
 public class ClassBooking
 {
     [BsonId]
-    [BsonRepresentation(BsonType.String)]
-    public Guid ClassBookingId { get; set; }
-    public Guid UserId { get; set; }
-    public Guid ClassSessionId { get; set; }
+    [BsonRepresentation(BsonType.ObjectId)]
+    public string? ClassBookingId { get; set; }
+
+    public string UserId { get; set; } = "";
+    public string ClassSessionId { get; set; } = "";
     public DateTime BookedAt { get; set; }
     public DateTime? CancelledAt { get; set; }
     public BookingStatus Status { get; set; }
