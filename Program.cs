@@ -12,7 +12,7 @@ builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
-    });
+    }); 
 builder.Services.AddOpenApi();
 
 builder.Services.AddSingleton<IBookingRepository, MongoBookingRepository>();
