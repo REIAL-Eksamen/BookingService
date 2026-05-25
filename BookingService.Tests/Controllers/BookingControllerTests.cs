@@ -44,7 +44,7 @@ public class BookingControllerTests
 
         var result = _controller.Get().ToList();
 
-        Assert.AreEqual(999, result.Count);
+        Assert.AreEqual(2, result.Count);
     }
 
     [TestMethod]
