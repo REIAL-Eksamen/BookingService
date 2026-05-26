@@ -3,6 +3,7 @@ using BookingService.Clients;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Serializers;
+using BookingService.Services;
 
 BsonSerializer.RegisterSerializer(new GuidSerializer(GuidRepresentation.Standard));
 
@@ -15,6 +16,7 @@ builder.Services.AddControllers()
     }); 
 builder.Services.AddOpenApi();
 
+builder.Services.AddScoped<IBookingService, BookingService.Services.BookingService>();
 builder.Services.AddSingleton<IBookingRepository, MongoBookingRepository>();
 
 builder.Services.AddHttpClient<ClassServiceClient>(client =>

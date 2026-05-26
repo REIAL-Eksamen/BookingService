@@ -1,7 +1,6 @@
 using BookingService.DTOs;
 using BookingService.Models;
-using BookingService.Repositories;
-using BookingService.Clients;
+using BookingService.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BookingService.Controllers;
@@ -10,27 +9,27 @@ namespace BookingService.Controllers;
 [Route("api/bookings")]
 public class BookingController : ControllerBase
 {
-    private readonly IBookingRepository _bookingRepository;
+    private readonly IBookingService _bookingService;
     private readonly ILogger<BookingController> _logger;
-    private readonly ClassServiceClient _classServiceClient;
 
-    public BookingController(IBookingRepository bookingRepository, ILogger<BookingController> logger, ClassServiceClient classServiceClient)
+    public BookingController(
+        IBookingService bookingService,
+        ILogger<BookingController> logger)
     {
-        _bookingRepository = bookingRepository;
+        _bookingService = bookingService;
         _logger = logger;
-        _classServiceClient = classServiceClient;
     }
 
     [HttpGet(Name = "GetBookings")]
     public IEnumerable<ClassBooking> Get()
     {
-        return _bookingRepository.GetAll();
+        return _bookingService.GetAll();
     }
 
     [HttpGet("{bookingId}", Name = "GetBookingById")]
     public ActionResult<ClassBooking> GetById(string bookingId)
     {
-        var booking = _bookingRepository.GetById(bookingId);
+        var booking = _bookingService.GetById(bookingId);
 
         if (booking is null)
         {
@@ -43,46 +42,25 @@ public class BookingController : ControllerBase
     [HttpGet("user/{userId}", Name = "GetBookingsByUser")]
     public ActionResult<IEnumerable<ClassBooking>> GetByUserId(string userId)
     {
-        var bookings = _bookingRepository.GetByUserId(userId);
+        var bookings = _bookingService.GetByUserId(userId);
+
         return Ok(bookings);
     }
 
     [HttpPost(Name = "CreateBooking")]
-    public async Task<ActionResult<ClassBooking>> Create([FromBody] CreateBookingDto dto)
+    public ActionResult<ClassBooking> Create([FromBody] CreateBookingDto dto)
     {
         if (!ModelState.IsValid)
         {
             return BadRequest(ModelState);
         }
 
-        // TDD-regel: Et medlem må ikke booke den samme holdsession to gange.
-        var existingBookings = _bookingRepository.GetByUserId(dto.UserId);
+        var booking = _bookingService.Create(dto);
 
-        var alreadyBooked = existingBookings.Any(booking =>
-            booking.ClassSessionId == dto.ClassSessionId &&
-            booking.Status != BookingStatus.Cancelled);
-
-        if (alreadyBooked)
+        if (booking is null)
         {
             return Conflict("User has already booked this class session.");
         }
-
-        // Midlertidigt kommenteret ud til ClassService er klar
-        // var classExists = await _classServiceClient.GetClassByIdAsync(dto.ClassSessionId);
-        // if (classExists is null)
-        // {
-        //     return NotFound($"Klassen {dto.ClassSessionId} findes ikke.");
-        // }
-
-        var booking = new ClassBooking
-        {
-            UserId = dto.UserId,
-            ClassSessionId = dto.ClassSessionId,
-            BookedAt = DateTime.UtcNow,
-            Status = BookingStatus.Confirmed
-        };
-
-        _bookingRepository.Add(booking);
 
         return CreatedAtRoute("GetBookingById", new { bookingId = booking.ClassBookingId }, booking);
     }
@@ -90,7 +68,7 @@ public class BookingController : ControllerBase
     [HttpPut("{bookingId}/cancel", Name = "CancelBooking")]
     public IActionResult Cancel(string bookingId)
     {
-        var cancelled = _bookingRepository.Cancel(bookingId, DateTime.UtcNow);
+        var cancelled = _bookingService.Cancel(bookingId);
 
         if (!cancelled)
         {
