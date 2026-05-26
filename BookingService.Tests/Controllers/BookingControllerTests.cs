@@ -1,8 +1,7 @@
-using BookingService.Clients;
 using BookingService.Controllers;
 using BookingService.DTOs;
 using BookingService.Models;
-using BookingService.Repositories;
+using BookingService.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -13,22 +12,19 @@ namespace BookingService.Tests.Controllers;
 [TestClass]
 public class BookingControllerTests
 {
-    private Mock<IBookingRepository> _mockRepository = null!;
+    private Mock<IBookingService> _mockService = null!;
     private Mock<ILogger<BookingController>> _mockLogger = null!;
     private BookingController _controller = null!;
 
     [TestInitialize]
     public void Setup()
     {
-        _mockRepository = new Mock<IBookingRepository>();
+        _mockService = new Mock<IBookingService>();
         _mockLogger = new Mock<ILogger<BookingController>>();
-        var httpClient = new HttpClient();
-        var classServiceClient = new ClassServiceClient(httpClient);
 
         _controller = new BookingController(
-            _mockRepository.Object,
-            _mockLogger.Object,
-            classServiceClient
+            _mockService.Object,
+            _mockLogger.Object
         );
     }
 
@@ -40,7 +36,7 @@ public class BookingControllerTests
             new() { ClassBookingId = "b1", UserId = "u1", ClassSessionId = "c1", BookedAt = DateTime.UtcNow },
             new() { ClassBookingId = "b2", UserId = "u2", ClassSessionId = "c2", BookedAt = DateTime.UtcNow }
         };
-        _mockRepository.Setup(r => r.GetAll()).Returns(bookings);
+        _mockService.Setup(s => s.GetAll()).Returns(bookings);
 
         var result = _controller.Get().ToList();
 
@@ -51,7 +47,7 @@ public class BookingControllerTests
     public void GetById_ReturnsOk_WhenBookingExists()
     {
         var booking = new ClassBooking { ClassBookingId = "b1", UserId = "u1", ClassSessionId = "c1", BookedAt = DateTime.UtcNow };
-        _mockRepository.Setup(r => r.GetById("b1")).Returns(booking);
+        _mockService.Setup(s => s.GetById("b1")).Returns(booking);
 
         var result = _controller.GetById("b1");
 
@@ -65,7 +61,7 @@ public class BookingControllerTests
     [TestMethod]
     public void GetById_ReturnsNotFound_WhenBookingDoesNotExist()
     {
-        _mockRepository.Setup(r => r.GetById("missing")).Returns((ClassBooking?)null);
+        _mockService.Setup(s => s.GetById("missing")).Returns((ClassBooking?)null);
 
         var result = _controller.GetById("missing");
 
@@ -79,7 +75,7 @@ public class BookingControllerTests
         {
             new() { ClassBookingId = "b1", UserId = "u1", ClassSessionId = "c1", BookedAt = DateTime.UtcNow }
         };
-        _mockRepository.Setup(r => r.GetByUserId("u1")).Returns(bookings);
+        _mockService.Setup(s => s.GetByUserId("u1")).Returns(bookings);
 
         var result = _controller.GetByUserId("u1");
 
@@ -87,35 +83,37 @@ public class BookingControllerTests
     }
 
     [TestMethod]
-    public async Task Create_ReturnsCreatedAtRoute_WhenValid()
+    public void Create_ReturnsCreatedAtRoute_WhenValid()
     {
         var dto = new CreateBookingDto { UserId = "u1", ClassSessionId = "c1" };
-        _mockRepository.Setup(r => r.Add(It.IsAny<ClassBooking>()));
+        var booking = new ClassBooking { ClassBookingId = "b1", UserId = "u1", ClassSessionId = "c1", BookedAt = DateTime.UtcNow, Status = BookingStatus.Confirmed };
+        _mockService.Setup(s => s.Create(dto)).Returns(booking);
 
-        var result = await _controller.Create(dto);
+        var result = _controller.Create(dto);
 
         Assert.IsInstanceOfType(result.Result, typeof(CreatedAtRouteResult));
         var created = result.Result as CreatedAtRouteResult;
-        var booking = created?.Value as ClassBooking;
-        Assert.IsNotNull(booking);
-        Assert.AreEqual("u1", booking.UserId);
-        Assert.AreEqual(BookingStatus.Confirmed, booking.Status);
+        var returned = created?.Value as ClassBooking;
+        Assert.IsNotNull(returned);
+        Assert.AreEqual("u1", returned.UserId);
+        Assert.AreEqual(BookingStatus.Confirmed, returned.Status);
     }
 
     [TestMethod]
-    public async Task Create_CallsRepositoryAdd_Once()
+    public void Create_ReturnsConflict_WhenUserAlreadyBookedSameClass()
     {
         var dto = new CreateBookingDto { UserId = "u1", ClassSessionId = "c1" };
+        _mockService.Setup(s => s.Create(dto)).Returns((ClassBooking?)null);
 
-        await _controller.Create(dto);
+        var result = _controller.Create(dto);
 
-        _mockRepository.Verify(r => r.Add(It.IsAny<ClassBooking>()), Times.Once);
+        Assert.IsInstanceOfType(result.Result, typeof(ConflictObjectResult));
     }
 
     [TestMethod]
     public void Cancel_ReturnsNoContent_WhenSuccessful()
     {
-        _mockRepository.Setup(r => r.Cancel("b1", It.IsAny<DateTime>())).Returns(true);
+        _mockService.Setup(s => s.Cancel("b1")).Returns(true);
 
         var result = _controller.Cancel("b1");
 
@@ -125,41 +123,10 @@ public class BookingControllerTests
     [TestMethod]
     public void Cancel_ReturnsNotFound_WhenBookingDoesNotExist()
     {
-        _mockRepository.Setup(r => r.Cancel("ghost", It.IsAny<DateTime>())).Returns(false);
+        _mockService.Setup(s => s.Cancel("ghost")).Returns(false);
 
         var result = _controller.Cancel("ghost");
 
         Assert.IsInstanceOfType(result, typeof(NotFoundResult));
-    }
-    
-    //TDD-testing regel:Medlem kan ikke booke samme holdsession to gange.
-    [TestMethod]
-    public async Task Create_ReturnsConflict_WhenUserAlreadyBookedSameClass()
-    {
-        // Arrange
-        var dto = new CreateBookingDto
-        {
-            UserId = "u1",
-            ClassSessionId = "c1"
-        };
-
-        var existingBooking = new ClassBooking
-        {
-            ClassBookingId = "b1",
-            UserId = "u1",
-            ClassSessionId = "c1",
-            BookedAt = DateTime.UtcNow,
-            Status = BookingStatus.Confirmed
-        };
-
-        _mockRepository
-            .Setup(r => r.GetByUserId("u1"))
-            .Returns(new List<ClassBooking> { existingBooking });
-
-        // Act
-        var result = await _controller.Create(dto);
-
-        // Assert
-        Assert.IsInstanceOfType(result.Result, typeof(ConflictObjectResult));
     }
 }
