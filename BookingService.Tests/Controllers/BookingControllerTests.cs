@@ -131,4 +131,35 @@ public class BookingControllerTests
 
         Assert.IsInstanceOfType(result, typeof(NotFoundResult));
     }
+    
+    //TDD-testing regel:Medlem kan ikke booke samme holdsession to gange.
+    [TestMethod]
+    public async Task Create_ReturnsConflict_WhenUserAlreadyBookedSameClass()
+    {
+        // Arrange
+        var dto = new CreateBookingDto
+        {
+            UserId = "u1",
+            ClassSessionId = "c1"
+        };
+
+        var existingBooking = new ClassBooking
+        {
+            ClassBookingId = "b1",
+            UserId = "u1",
+            ClassSessionId = "c1",
+            BookedAt = DateTime.UtcNow,
+            Status = BookingStatus.Confirmed
+        };
+
+        _mockRepository
+            .Setup(r => r.GetByUserId("u1"))
+            .Returns(new List<ClassBooking> { existingBooking });
+
+        // Act
+        var result = await _controller.Create(dto);
+
+        // Assert
+        Assert.IsInstanceOfType(result.Result, typeof(ConflictObjectResult));
+    }
 }

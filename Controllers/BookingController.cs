@@ -55,6 +55,18 @@ public class BookingController : ControllerBase
             return BadRequest(ModelState);
         }
 
+        // TDD-regel: Et medlem må ikke booke den samme holdsession to gange.
+        var existingBookings = _bookingRepository.GetByUserId(dto.UserId);
+
+        var alreadyBooked = existingBookings.Any(booking =>
+            booking.ClassSessionId == dto.ClassSessionId &&
+            booking.Status != BookingStatus.Cancelled);
+
+        if (alreadyBooked)
+        {
+            return Conflict("User has already booked this class session.");
+        }
+
         // Midlertidigt kommenteret ud til ClassService er klar
         // var classExists = await _classServiceClient.GetClassByIdAsync(dto.ClassSessionId);
         // if (classExists is null)
