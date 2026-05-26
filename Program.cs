@@ -19,7 +19,7 @@ builder.Services.AddOpenApi();
 builder.Services.AddScoped<IBookingService, BookingService.Services.BookingService>();
 builder.Services.AddSingleton<IBookingRepository, MongoBookingRepository>();
 
-builder.Services.AddHttpClient<ClassServiceClient>(client =>
+builder.Services.AddHttpClient<IClassServiceClient>(client =>
 {
     client.BaseAddress = new Uri(builder.Configuration["ClassService:BaseUrl"]!);
 });

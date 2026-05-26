@@ -1,3 +1,4 @@
+using BookingService.Clients;
 using BookingService.DTOs;
 using BookingService.Models;
 using BookingService.Repositories;
@@ -7,10 +8,14 @@ namespace BookingService.Services;
 public class BookingService : IBookingService
 {
     private readonly IBookingRepository _repository;
+    private readonly IClassServiceClient _classServiceClient;
 
-    public BookingService(IBookingRepository repository)
+    public BookingService(
+        IBookingRepository repository,
+        IClassServiceClient classServiceClient)
     {
         _repository = repository;
+        _classServiceClient = classServiceClient;
     }
 
     public IEnumerable<ClassBooking> GetAll()
@@ -28,8 +33,25 @@ public class BookingService : IBookingService
         return _repository.GetByUserId(userId);
     }
 
-    public ClassBooking? Create(CreateBookingDto request)
+    public async Task<ClassBooking?> CreateAsync(CreateBookingDto request)
     {
+        var classInfo = await _classServiceClient.GetClassByIdAsync(request.ClassSessionId);
+
+        if (classInfo is null)
+        {
+            return null;
+        }
+
+        if (classInfo.Status == ClassStatus.Cancelled || classInfo.Status == ClassStatus.Done)
+        {
+            return null;
+        }
+
+        if (classInfo.StartTime is not null && classInfo.StartTime <= DateTime.UtcNow)
+        {
+            return null;
+        }
+
         var existingBookings = _repository.GetByUserId(request.UserId);
 
         var alreadyBooked = existingBookings.Any(booking =>
@@ -39,6 +61,18 @@ public class BookingService : IBookingService
         if (alreadyBooked)
         {
             return null;
+        }
+
+        if (classInfo.Classroom is not null)
+        {
+            var confirmedBookingsForClass = _repository.GetAll().Count(booking =>
+                booking.ClassSessionId == request.ClassSessionId &&
+                booking.Status == BookingStatus.Confirmed);
+
+            if (confirmedBookingsForClass >= classInfo.Classroom.Capacity)
+            {
+                return null;
+            }
         }
 
         var booking = new ClassBooking

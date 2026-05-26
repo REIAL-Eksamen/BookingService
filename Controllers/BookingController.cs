@@ -48,18 +48,18 @@ public class BookingController : ControllerBase
     }
 
     [HttpPost(Name = "CreateBooking")]
-    public ActionResult<ClassBooking> Create([FromBody] CreateBookingDto dto)
+    public async Task<ActionResult<ClassBooking>> Create([FromBody] CreateBookingDto dto)
     {
         if (!ModelState.IsValid)
         {
             return BadRequest(ModelState);
         }
 
-        var booking = _bookingService.Create(dto);
+        var booking = await _bookingService.CreateAsync(dto);
 
         if (booking is null)
         {
-            return Conflict("User has already booked this class session.");
+            return Conflict("Booking could not be created. Class may not exist, may be full, cancelled, done, already started, or already booked by the user.");
         }
 
         return CreatedAtRoute("GetBookingById", new { bookingId = booking.ClassBookingId }, booking);

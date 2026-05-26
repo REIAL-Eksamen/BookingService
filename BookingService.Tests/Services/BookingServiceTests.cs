@@ -1,3 +1,4 @@
+using BookingService.Clients;
 using BookingService.DTOs;
 using BookingService.Models;
 using BookingService.Repositories;
@@ -10,17 +11,23 @@ namespace BookingService.Tests.Services;
 public class BookingServiceTests
 {
     private Mock<IBookingRepository> _mockRepository = null!;
+    private Mock<IClassServiceClient> _mockClassServiceClient = null!;
     private BookingService.Services.BookingService _service = null!;
 
     [TestInitialize]
     public void Setup()
     {
         _mockRepository = new Mock<IBookingRepository>();
-        _service = new BookingService.Services.BookingService(_mockRepository.Object);
+        _mockClassServiceClient = new Mock<IClassServiceClient>();
+
+        _service = new BookingService.Services.BookingService(
+            _mockRepository.Object,
+            _mockClassServiceClient.Object
+        );
     }
 
     [TestMethod]
-    public void Create_ReturnsBooking_WhenNoExistingBooking()
+    public async Task CreateAsync_ReturnsBooking_WhenNoExistingBooking()
     {
         var dto = new CreateBookingDto
         {
@@ -28,11 +35,31 @@ public class BookingServiceTests
             ClassSessionId = "c1"
         };
 
+        _mockClassServiceClient
+            .Setup(client => client.GetClassByIdAsync("c1"))
+            .ReturnsAsync(new ClassDto
+            {
+                Id = "c1",
+                ClassName = "Yoga",
+                StartTime = DateTime.UtcNow.AddDays(1),
+                Status = ClassStatus.Scheduled,
+                Classroom = new ClassroomDto
+                {
+                    ClassroomId = "room1",
+                    ClassroomName = "Sal 1",
+                    Capacity = 20
+                }
+            });
+
         _mockRepository
             .Setup(repository => repository.GetByUserId("u1"))
             .Returns(new List<ClassBooking>());
 
-        var result = _service.Create(dto);
+        _mockRepository
+            .Setup(repository => repository.GetAll())
+            .Returns(new List<ClassBooking>());
+
+        var result = await _service.CreateAsync(dto);
 
         Assert.IsNotNull(result);
         Assert.AreEqual("u1", result.UserId);
@@ -45,7 +72,7 @@ public class BookingServiceTests
     }
 
     [TestMethod]
-    public void Create_ReturnsNull_WhenUserAlreadyBookedSameClass()
+    public async Task CreateAsync_ReturnsNull_WhenUserAlreadyBookedSameClass()
     {
         var dto = new CreateBookingDto
         {
@@ -62,11 +89,49 @@ public class BookingServiceTests
             Status = BookingStatus.Confirmed
         };
 
+        _mockClassServiceClient
+            .Setup(client => client.GetClassByIdAsync("c1"))
+            .ReturnsAsync(new ClassDto
+            {
+                Id = "c1",
+                ClassName = "Yoga",
+                StartTime = DateTime.UtcNow.AddDays(1),
+                Status = ClassStatus.Scheduled,
+                Classroom = new ClassroomDto
+                {
+                    ClassroomId = "room1",
+                    ClassroomName = "Sal 1",
+                    Capacity = 20
+                }
+            });
+
         _mockRepository
             .Setup(repository => repository.GetByUserId("u1"))
             .Returns(new List<ClassBooking> { existingBooking });
 
-        var result = _service.Create(dto);
+        var result = await _service.CreateAsync(dto);
+
+        Assert.IsNull(result);
+
+        _mockRepository.Verify(
+            repository => repository.Add(It.IsAny<ClassBooking>()),
+            Times.Never);
+    }
+
+    [TestMethod]
+    public async Task CreateAsync_ReturnsNull_WhenClassDoesNotExist()
+    {
+        var dto = new CreateBookingDto
+        {
+            UserId = "u1",
+            ClassSessionId = "missing-class"
+        };
+
+        _mockClassServiceClient
+            .Setup(client => client.GetClassByIdAsync("missing-class"))
+            .ReturnsAsync((ClassDto?)null);
+
+        var result = await _service.CreateAsync(dto);
 
         Assert.IsNull(result);
 
