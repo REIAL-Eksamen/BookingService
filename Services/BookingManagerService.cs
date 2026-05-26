@@ -56,6 +56,11 @@ public class BookingService : IBookingService
 
     public bool Cancel(string bookingId)
     {
+        if (string.IsNullOrWhiteSpace(bookingId))
+        {
+            return false;
+        }
+
         return _repository.Cancel(bookingId, DateTime.UtcNow);
     }
 }

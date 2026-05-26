@@ -75,4 +75,19 @@ public class BookingServiceTests
 
         Assert.IsFalse(result);
     }
+    
+    //TDD testing = hvis bookingId er tom, skal booking ikke forsøges afmeldt.
+    [TestMethod]
+    public void Cancel_ReturnsFalse_WhenBookingIdIsEmpty()
+    {
+        // Arrange
+        var bookingId = "";
+
+        // Act
+        var result = _service.Cancel(bookingId);
+
+        // Assert
+        Assert.IsFalse(result);
+        _mockRepository.Verify(r => r.Cancel(It.IsAny<string>(), It.IsAny<DateTime>()), Times.Never);
+    }
 }
