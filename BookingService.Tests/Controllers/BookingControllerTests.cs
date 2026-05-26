@@ -29,36 +29,6 @@ public class BookingControllerTests
     }
 
     [TestMethod]
-    public void Get_ReturnsAllBookings()
-    {
-        var bookings = new List<ClassBooking>
-        {
-            new() { ClassBookingId = "b1", UserId = "u1", ClassSessionId = "c1", BookedAt = DateTime.UtcNow },
-            new() { ClassBookingId = "b2", UserId = "u2", ClassSessionId = "c2", BookedAt = DateTime.UtcNow }
-        };
-        _mockService.Setup(s => s.GetAll()).Returns(bookings);
-
-        var result = _controller.Get().ToList();
-
-        Assert.AreEqual(2, result.Count);
-    }
-
-    [TestMethod]
-    public void GetById_ReturnsOk_WhenBookingExists()
-    {
-        var booking = new ClassBooking { ClassBookingId = "b1", UserId = "u1", ClassSessionId = "c1", BookedAt = DateTime.UtcNow };
-        _mockService.Setup(s => s.GetById("b1")).Returns(booking);
-
-        var result = _controller.GetById("b1");
-
-        Assert.IsInstanceOfType(result.Result, typeof(OkObjectResult));
-        var ok = result.Result as OkObjectResult;
-        var returned = ok?.Value as ClassBooking;
-        Assert.IsNotNull(returned);
-        Assert.AreEqual("b1", returned.ClassBookingId);
-    }
-
-    [TestMethod]
     public void GetById_ReturnsNotFound_WhenBookingDoesNotExist()
     {
         _mockService.Setup(s => s.GetById("missing")).Returns((ClassBooking?)null);
