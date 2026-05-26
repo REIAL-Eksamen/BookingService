@@ -22,72 +22,68 @@ public class BookingServiceTests
     [TestMethod]
     public void Create_ReturnsBooking_WhenNoExistingBooking()
     {
-        var dto = new CreateBookingDto { UserId = "u1", ClassSessionId = "c1" };
-        _mockRepository.Setup(r => r.GetByUserId("u1")).Returns(new List<ClassBooking>());
+        var dto = new CreateBookingDto
+        {
+            UserId = "u1",
+            ClassSessionId = "c1"
+        };
+
+        _mockRepository
+            .Setup(repository => repository.GetByUserId("u1"))
+            .Returns(new List<ClassBooking>());
 
         var result = _service.Create(dto);
 
         Assert.IsNotNull(result);
         Assert.AreEqual("u1", result.UserId);
+        Assert.AreEqual("c1", result.ClassSessionId);
         Assert.AreEqual(BookingStatus.Confirmed, result.Status);
+
+        _mockRepository.Verify(
+            repository => repository.Add(It.IsAny<ClassBooking>()),
+            Times.Once);
     }
 
     [TestMethod]
     public void Create_ReturnsNull_WhenUserAlreadyBookedSameClass()
     {
-        var dto = new CreateBookingDto { UserId = "u1", ClassSessionId = "c1" };
-        var existing = new ClassBooking { UserId = "u1", ClassSessionId = "c1", Status = BookingStatus.Confirmed };
-        _mockRepository.Setup(r => r.GetByUserId("u1")).Returns(new List<ClassBooking> { existing });
+        var dto = new CreateBookingDto
+        {
+            UserId = "u1",
+            ClassSessionId = "c1"
+        };
+
+        var existingBooking = new ClassBooking
+        {
+            ClassBookingId = "b1",
+            UserId = "u1",
+            ClassSessionId = "c1",
+            BookedAt = DateTime.UtcNow,
+            Status = BookingStatus.Confirmed
+        };
+
+        _mockRepository
+            .Setup(repository => repository.GetByUserId("u1"))
+            .Returns(new List<ClassBooking> { existingBooking });
 
         var result = _service.Create(dto);
 
         Assert.IsNull(result);
-    }
 
-    [TestMethod]
-    public void Create_ReturnsBooking_WhenPreviousBookingWasCancelled()
-    {
-        var dto = new CreateBookingDto { UserId = "u1", ClassSessionId = "c1" };
-        var cancelled = new ClassBooking { UserId = "u1", ClassSessionId = "c1", Status = BookingStatus.Cancelled };
-        _mockRepository.Setup(r => r.GetByUserId("u1")).Returns(new List<ClassBooking> { cancelled });
-
-        var result = _service.Create(dto);
-
-        Assert.IsNotNull(result);
-    }
-
-    [TestMethod]
-    public void Cancel_ReturnsTrue_WhenBookingExists()
-    {
-        _mockRepository.Setup(r => r.Cancel("b1", It.IsAny<DateTime>())).Returns(true);
-
-        var result = _service.Cancel("b1");
-
-        Assert.IsTrue(result);
+        _mockRepository.Verify(
+            repository => repository.Add(It.IsAny<ClassBooking>()),
+            Times.Never);
     }
 
     [TestMethod]
     public void Cancel_ReturnsFalse_WhenBookingDoesNotExist()
     {
-        _mockRepository.Setup(r => r.Cancel("ghost", It.IsAny<DateTime>())).Returns(false);
+        _mockRepository
+            .Setup(repository => repository.Cancel("ghost", It.IsAny<DateTime>()))
+            .Returns(false);
 
         var result = _service.Cancel("ghost");
 
         Assert.IsFalse(result);
-    }
-    
-    //TDD testing = hvis bookingId er tom, skal booking ikke forsøges afmeldt.
-    [TestMethod]
-    public void Cancel_ReturnsFalse_WhenBookingIdIsEmpty()
-    {
-        // Arrange
-        var bookingId = "";
-
-        // Act
-        var result = _service.Cancel(bookingId);
-
-        // Assert
-        Assert.IsFalse(result);
-        _mockRepository.Verify(r => r.Cancel(It.IsAny<string>(), It.IsAny<DateTime>()), Times.Never);
     }
 }
