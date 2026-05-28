@@ -11,7 +11,7 @@ public interface IBookingService
 
     IEnumerable<ClassBooking> GetByUserId(string userId);
 
-    Task<ClassBooking?> CreateAsync(CreateBookingDto request);
+    Task<ClassBooking?> CreateAsync(string userId, CreateBookingDto request);
 
     bool Cancel(string bookingId);
 }

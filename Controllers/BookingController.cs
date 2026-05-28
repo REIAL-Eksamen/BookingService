@@ -2,6 +2,8 @@ using BookingService.DTOs;
 using BookingService.Models;
 using BookingService.Services;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 
 namespace BookingService.Controllers;
 
@@ -47,6 +49,7 @@ public class BookingController : ControllerBase
         return Ok(bookings);
     }
 
+    [Authorize]
     [HttpPost(Name = "CreateBooking")]
     public async Task<ActionResult<ClassBooking>> Create([FromBody] CreateBookingDto dto)
     {
@@ -55,7 +58,14 @@ public class BookingController : ControllerBase
             return BadRequest(ModelState);
         }
 
-        var booking = await _bookingService.CreateAsync(dto);
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return Unauthorized();
+        }
+
+        var booking = await _bookingService.CreateAsync(userId, dto);
 
         if (booking is null)
         {

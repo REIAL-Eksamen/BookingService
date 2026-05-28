@@ -33,7 +33,7 @@ public class BookingService : IBookingService
         return _repository.GetByUserId(userId);
     }
 
-    public async Task<ClassBooking?> CreateAsync(CreateBookingDto request)
+    public async Task<ClassBooking?> CreateAsync(string userId, CreateBookingDto request)
     {
         var classInfo = await _classServiceClient.GetClassByIdAsync(request.ClassSessionId);
 
@@ -52,7 +52,7 @@ public class BookingService : IBookingService
             return null;
         }
 
-        var existingBookings = _repository.GetByUserId(request.UserId);
+        var existingBookings = _repository.GetByUserId(userId);
 
         var alreadyBooked = existingBookings.Any(booking =>
             booking.ClassSessionId == request.ClassSessionId &&
@@ -77,7 +77,7 @@ public class BookingService : IBookingService
 
         var booking = new ClassBooking
         {
-            UserId = request.UserId,
+            UserId = userId,
             ClassSessionId = request.ClassSessionId,
             BookedAt = DateTime.UtcNow,
             Status = BookingStatus.Confirmed
