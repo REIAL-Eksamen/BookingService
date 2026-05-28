@@ -1,3 +1,4 @@
+using MassTransit;
 using System.Text;
 using BookingService.Repositories;
 using BookingService.Clients;
@@ -55,6 +56,21 @@ builder.Services
     });
 
 builder.Services.AddAuthorization();
+
+builder.Services.AddMassTransit(x =>
+{
+    x.AddConsumer<BookingService.Consumers.ClassCancelledConsumer>();
+
+    x.UsingRabbitMq((context, cfg) =>
+    {
+        cfg.Host(builder.Configuration["RabbitMQ:Host"] ?? "rabbitmq", "/", h =>
+        {
+            h.Username("guest");
+            h.Password("guest");
+        });
+        cfg.ConfigureEndpoints(context);
+    });
+});
 
 var app = builder.Build();
 
