@@ -28,6 +28,11 @@ builder.Services.AddHttpClient<IClassServiceClient, ClassServiceClient>(client =
     client.BaseAddress = new Uri(builder.Configuration["ClassService:BaseUrl"]!);
 });
 
+builder.Services.AddHttpClient<IUserServiceClient, UserServiceClient>(client =>
+{
+    client.BaseAddress = new Uri(builder.Configuration["UserService:BaseUrl"]!);
+});
+
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "";
 var jwtSecret = builder.Configuration["Jwt:Key"] ?? "";
 var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "FitLifeUsers";

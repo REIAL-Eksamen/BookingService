@@ -1,3 +1,4 @@
+using BookingService.Clients;
 using BookingService.DTOs;
 using BookingService.Models;
 using BookingService.Services;
@@ -12,13 +13,16 @@ namespace BookingService.Controllers;
 public class BookingController : ControllerBase
 {
     private readonly IBookingService _bookingService;
+    private readonly IUserServiceClient _userServiceClient;
     private readonly ILogger<BookingController> _logger;
 
     public BookingController(
         IBookingService bookingService,
+        IUserServiceClient userServiceClient,
         ILogger<BookingController> logger)
     {
         _bookingService = bookingService;
+        _userServiceClient = userServiceClient;
         _logger = logger;
     }
 
@@ -58,14 +62,21 @@ public class BookingController : ControllerBase
             return BadRequest(ModelState);
         }
 
-        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var authId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-        if (string.IsNullOrWhiteSpace(userId))
+        if (string.IsNullOrWhiteSpace(authId))
         {
             return Unauthorized();
         }
 
-        var booking = await _bookingService.CreateAsync(userId, dto);
+        var user = await _userServiceClient.GetUserByAuthIdAsync(authId);
+
+        if (user?.Id is null)
+        {
+            return Unauthorized();
+        }
+
+        var booking = await _bookingService.CreateAsync(user.Id, dto);
 
         if (booking is null)
         {

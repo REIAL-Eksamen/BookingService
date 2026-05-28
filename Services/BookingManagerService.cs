@@ -9,13 +9,16 @@ public class BookingService : IBookingService
 {
     private readonly IBookingRepository _repository;
     private readonly IClassServiceClient _classServiceClient;
+    private readonly IUserServiceClient _userServiceClient;
 
     public BookingService(
         IBookingRepository repository,
-        IClassServiceClient classServiceClient)
+        IClassServiceClient classServiceClient,
+        IUserServiceClient userServiceClient)
     {
         _repository = repository;
         _classServiceClient = classServiceClient;
+        _userServiceClient = userServiceClient;
     }
 
     public IEnumerable<ClassBooking> GetAll()
@@ -35,6 +38,10 @@ public class BookingService : IBookingService
 
     public async Task<ClassBooking?> CreateAsync(string userId, CreateBookingDto request)
     {
+        var user = await _userServiceClient.GetUserByIdAsync(userId);
+        if (user is null)
+            return null;
+
         var classInfo = await _classServiceClient.GetClassByIdAsync(request.ClassSessionId);
 
         if (classInfo is null)
