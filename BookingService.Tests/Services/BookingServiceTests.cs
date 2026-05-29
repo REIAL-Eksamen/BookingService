@@ -12,6 +12,7 @@ public class BookingServiceTests
 {
     private Mock<IBookingRepository> _mockRepository = null!;
     private Mock<IClassServiceClient> _mockClassServiceClient = null!;
+    private Mock<IUserServiceClient> _mockUserServiceClient = null!;
     private BookingService.Services.BookingService _service = null!;
 
     [TestInitialize]
@@ -19,10 +20,16 @@ public class BookingServiceTests
     {
         _mockRepository = new Mock<IBookingRepository>();
         _mockClassServiceClient = new Mock<IClassServiceClient>();
+        _mockUserServiceClient = new Mock<IUserServiceClient>();
+
+        _mockUserServiceClient
+            .Setup(c => c.GetUserByIdAsync("u1"))
+            .ReturnsAsync(new UserDto { Id = "u1" });
 
         _service = new BookingService.Services.BookingService(
             _mockRepository.Object,
-            _mockClassServiceClient.Object
+            _mockClassServiceClient.Object,
+            _mockUserServiceClient.Object
         );
     }
 
@@ -31,7 +38,6 @@ public class BookingServiceTests
     {
         var dto = new CreateBookingDto
         {
-            UserId = "u1",
             ClassSessionId = "c1"
         };
 
@@ -59,7 +65,7 @@ public class BookingServiceTests
             .Setup(repository => repository.GetAll())
             .Returns(new List<ClassBooking>());
 
-        var result = await _service.CreateAsync(dto);
+        var result = await _service.CreateAsync("u1", dto);
 
         Assert.IsNotNull(result);
         Assert.AreEqual("u1", result.UserId);
@@ -76,7 +82,6 @@ public class BookingServiceTests
     {
         var dto = new CreateBookingDto
         {
-            UserId = "u1",
             ClassSessionId = "c1"
         };
 
@@ -109,7 +114,7 @@ public class BookingServiceTests
             .Setup(repository => repository.GetByUserId("u1"))
             .Returns(new List<ClassBooking> { existingBooking });
 
-        var result = await _service.CreateAsync(dto);
+        var result = await _service.CreateAsync("u1", dto);
 
         Assert.IsNull(result);
 
@@ -123,7 +128,6 @@ public class BookingServiceTests
     {
         var dto = new CreateBookingDto
         {
-            UserId = "u1",
             ClassSessionId = "missing-class"
         };
 
@@ -131,7 +135,7 @@ public class BookingServiceTests
             .Setup(client => client.GetClassByIdAsync("missing-class"))
             .ReturnsAsync((ClassDto?)null);
 
-        var result = await _service.CreateAsync(dto);
+        var result = await _service.CreateAsync("u1", dto);
 
         Assert.IsNull(result);
 

@@ -29,7 +29,7 @@ public class UserServiceClient : IUserServiceClient
         return await response.Content.ReadFromJsonAsync<UserDto>();
     }
 
-    //bruges når vi kun har authId fra jwt-token fx ved oprettelse af ny booking. 
+    // Bruges tidligt i booking-flowet, hvor vi kun har authId fra JWT-tokenet.
     public async Task<UserDto?> GetUserByAuthIdAsync(string authId)
     {
         var response = await _httpClient.GetAsync($"api/users/by-auth/{authId}");

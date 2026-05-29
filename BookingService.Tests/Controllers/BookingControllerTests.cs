@@ -1,11 +1,14 @@
+using BookingService.Clients;
 using BookingService.Controllers;
 using BookingService.DTOs;
 using BookingService.Models;
 using BookingService.Services;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
+using System.Security.Claims;
 
 namespace BookingService.Tests.Controllers;
 
@@ -13,6 +16,7 @@ namespace BookingService.Tests.Controllers;
 public class BookingControllerTests
 {
     private Mock<IBookingService> _mockService = null!;
+    private Mock<IUserServiceClient> _mockUserServiceClient = null!;
     private Mock<ILogger<BookingController>> _mockLogger = null!;
     private BookingController _controller = null!;
 
@@ -20,12 +24,30 @@ public class BookingControllerTests
     public void Setup()
     {
         _mockService = new Mock<IBookingService>();
+        _mockUserServiceClient = new Mock<IUserServiceClient>();
         _mockLogger = new Mock<ILogger<BookingController>>();
 
         _controller = new BookingController(
             _mockService.Object,
+            _mockUserServiceClient.Object,
             _mockLogger.Object
         );
+
+        var claims = new List<Claim>
+        {
+            new Claim(ClaimTypes.NameIdentifier, "auth-id-123")
+        };
+        var identity = new ClaimsIdentity(claims, "TestAuth");
+        var claimsPrincipal = new ClaimsPrincipal(identity);
+
+        _controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = claimsPrincipal }
+        };
+
+        _mockUserServiceClient
+            .Setup(c => c.GetUserByAuthIdAsync("auth-id-123"))
+            .ReturnsAsync(new UserDto { Id = "u1" });
     }
 
     [TestMethod]
@@ -58,7 +80,6 @@ public class BookingControllerTests
     {
         var dto = new CreateBookingDto
         {
-            UserId = "u1",
             ClassSessionId = "c1"
         };
 
@@ -72,7 +93,7 @@ public class BookingControllerTests
         };
 
         _mockService
-            .Setup(s => s.CreateAsync(dto))
+            .Setup(s => s.CreateAsync(It.IsAny<string>(), It.IsAny<CreateBookingDto>()))
             .ReturnsAsync(booking);
 
         var result = await _controller.Create(dto);
@@ -92,12 +113,11 @@ public class BookingControllerTests
     {
         var dto = new CreateBookingDto
         {
-            UserId = "u1",
             ClassSessionId = "c1"
         };
 
         _mockService
-            .Setup(s => s.CreateAsync(dto))
+            .Setup(s => s.CreateAsync(It.IsAny<string>(), It.IsAny<CreateBookingDto>()))
             .ReturnsAsync((ClassBooking?)null);
 
         var result = await _controller.Create(dto);

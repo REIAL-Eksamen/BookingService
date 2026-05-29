@@ -3,6 +3,12 @@ using BookingService.DTOs;
 using BookingService.Models;
 using BookingService.Repositories;
 
+
+//håndterer al forretningslogik omkring boookinger!! 
+//hvordan gør den det tænker du nok?? 
+//før en booking oprettes valideres både bruger, hold og kapacitet. 
+//tjek sker gennem user og classservice. 
+//hvis noget ikke er i orden, returneres null. ellers oprettes hold og gemmes yuppi
 namespace BookingService.Services;
 
 public class BookingService : IBookingService
@@ -38,28 +44,28 @@ public class BookingService : IBookingService
     
     public async Task<ClassBooking?> CreateAsync(string userId, CreateBookingDto request)
     {
-        // verificer at brugeren eksisterer i userservice før vi går videre.
+        // verificer at brugeren eksisterer i userservice før vi går videre. ellers ingen bruger = booking. 
         var user = await _userServiceClient.GetUserByIdAsync(userId);
         if (user is null)
             return null;
-        //hvis hold er aflyst eller afsluttede kan det ikke bookes. 
+        //henter hold fra classservice og tjkker at det faktisk findes. 
         var classInfo = await _classServiceClient.GetClassByIdAsync(request.ClassSessionId);
 
         if (classInfo is null)
         {
             return null;
         }
-
+        //aflyste eller aflsuttede hold kan ikke bookes.
         if (classInfo.Status == ClassStatus.Cancelled || classInfo.Status == ClassStatus.Done)
         {
             return null;
         }
-        //forhinderer at hold kan bookes, hvis det allerede er startet.
+        //kan heller ikke booke et hold der allerede er i gang
         if (classInfo.StartTime is not null && classInfo.StartTime <= DateTime.UtcNow)
         {
             return null;
         }
-        //tjekker om brugeren allerede har en aktiv booking på holdet.
+        
         var existingBookings = _repository.GetByUserId(userId);
 
         var alreadyBooked = existingBookings.Any(booking =>
@@ -70,7 +76,7 @@ public class BookingService : IBookingService
         {
             return null;
         }
-        //tjekker kapacitet, tjekker confirmed bookinger. 
+        //tjekker kapacitet/plads ved at tælle confirmed bookinger. 
         if (classInfo.Classroom is not null)
         {
             var confirmedBookingsForClass = _repository.GetAll().Count(booking =>
@@ -82,7 +88,7 @@ public class BookingService : IBookingService
                 return null;
             }
         }
-
+        //er alt ok? så opretter den og gemmer.
         var booking = new ClassBooking
         {
             UserId = userId,
