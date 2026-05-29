@@ -12,6 +12,7 @@ public class MongoBookingRepository : IBookingRepository
 
     public MongoBookingRepository(IConfiguration configuration)
     {
+        //henter connection info fra appsettings variables.
         var connectionString = configuration["MongoDB:ConnectionString"];
         var databaseName = configuration["MongoDB:DatabaseName"];
         var collectionName = configuration["MongoDB:CollectionName"];
@@ -38,7 +39,9 @@ public class MongoBookingRepository : IBookingRepository
         var booking = GetById(bookingId);
         if (booking is null) return false;
 
+        //sætter status og tidspunkt på selve booking-objektet før vi gemmer. 
         booking.Cancel(cancelledAt);
+        // replaceone erstatter hele dokumentet - modifiedcount bekræfter opdatering. 
         var result = _bookings.ReplaceOne(b => b.ClassBookingId == bookingId, booking);
         return result.ModifiedCount > 0;
     }

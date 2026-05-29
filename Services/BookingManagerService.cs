@@ -35,13 +35,14 @@ public class BookingService : IBookingService
     {
         return _repository.GetByUserId(userId);
     }
-
+    
     public async Task<ClassBooking?> CreateAsync(string userId, CreateBookingDto request)
     {
+        // verificer at brugeren eksisterer i userservice før vi går videre.
         var user = await _userServiceClient.GetUserByIdAsync(userId);
         if (user is null)
             return null;
-
+        //hvis hold er aflyst eller afsluttede kan det ikke bookes. 
         var classInfo = await _classServiceClient.GetClassByIdAsync(request.ClassSessionId);
 
         if (classInfo is null)
@@ -53,12 +54,12 @@ public class BookingService : IBookingService
         {
             return null;
         }
-
+        //forhinderer at hold kan bookes, hvis det allerede er startet.
         if (classInfo.StartTime is not null && classInfo.StartTime <= DateTime.UtcNow)
         {
             return null;
         }
-
+        //tjekker om brugeren allerede har en aktiv booking på holdet.
         var existingBookings = _repository.GetByUserId(userId);
 
         var alreadyBooked = existingBookings.Any(booking =>
@@ -69,7 +70,7 @@ public class BookingService : IBookingService
         {
             return null;
         }
-
+        //tjekker kapacitet, tjekker confirmed bookinger. 
         if (classInfo.Classroom is not null)
         {
             var confirmedBookingsForClass = _repository.GetAll().Count(booking =>
